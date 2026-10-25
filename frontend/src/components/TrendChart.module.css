@@ -1,0 +1,24 @@
+/* src/components/TrendChart.module.css */
+.wrapper {
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+.header { margin-bottom: var(--space-4); }
+.title { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text); }
+.subtitle { font-size: var(--font-size-sm); color: var(--color-text-muted); margin-top: 2px; }
+
+/* Custom tooltip bubble */
+.tooltip {
+  background: var(--color-text);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-lg);
+  min-width: 120px;
+}
+.tooltipDate { font-size: var(--font-size-xs); color: rgba(255,255,255,0.6); margin-bottom: var(--space-2); }
+.tooltipRow { display: flex; justify-content: space-between; gap: var(--space-4); font-size: var(--font-size-sm); }
+.tooltipLabel { font-weight: 500; opacity: 0.85; }
+.tooltipValue { font-weight: 700; }

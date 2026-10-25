@@ -1,0 +1,91 @@
+/* src/pages/AnalysisDashboardPage.module.css */
+
+.page {
+  padding: var(--space-6) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* SITE HEADER */
+.siteHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.siteHeaderLeft { display: flex; flex-direction: column; gap: var(--space-1); }
+
+.siteTag {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.siteName {
+  font-size: var(--font-size-3xl);
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.siteSubtitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.siteHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.dateRange {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+}
+
+/* CONTENT GRID: left (wide) + right (sidebar) */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* Left column: stacks vertically */
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* KPI row: 2 cards side by side */
+.kpiRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* Right column */
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-4));
+}

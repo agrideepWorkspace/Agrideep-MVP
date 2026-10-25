@@ -1,0 +1,160 @@
+/* src/components/Sidebar.module.css */
+
+.sidebar {
+  width: var(--sidebar-width);
+  min-height: 100vh;
+  background: var(--color-sidebar);
+  display: flex;
+  flex-direction: column;
+  position: sticky;   /* stays fixed as you scroll the main content */
+  top: 0;
+  left: 0;
+  z-index: 100;
+  padding: var(--space-4) 0;
+}
+
+/* ── LOGO ── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.logoIcon {
+  width: 34px;
+  height: 34px;
+  background: var(--color-accent);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0; /* prevents icon from shrinking when space is tight */
+}
+
+.logoText {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-text-inverse);
+  letter-spacing: -0.02em;
+}
+
+/* ── NAV ── */
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  flex: 1; /* takes up available space, pushing bottom section down */
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  cursor: pointer;
+}
+
+.navLink:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-text-inverse);
+}
+
+/* This class is applied by NavLink when the route is active */
+.navLinkActive {
+  background: var(--color-sidebar-active);
+  color: var(--color-text-inverse);
+  position: relative;
+}
+
+/* Vertical accent bar on the left of the active nav item */
+.navLinkActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: var(--color-accent);
+  border-radius: 0 2px 2px 0;
+}
+
+/* ── BOTTOM SECTION ── */
+.bottom {
+  padding: 0 var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── USER CARD ── */
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: white;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.userInfo {
+  flex: 1;
+  min-width: 0; /* allows text truncation */
+}
+
+.userName {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-inverse);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userTitle {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logoutBtn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition-fast);
+}
+
+.logoutBtn:hover {
+  color: rgba(255,255,255,0.8);
+}

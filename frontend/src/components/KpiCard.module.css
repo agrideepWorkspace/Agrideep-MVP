@@ -1,0 +1,112 @@
+/* src/components/KpiCard.module.css */
+
+.card {
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Dark variant (cloud coverage card) */
+.cardDark {
+  background: #1C3A2A;
+  border-color: transparent;
+  color: white;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cardDark .title {
+  color: rgba(255,255,255,0.6);
+}
+
+.iconSlot {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardDark .iconSlot {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+}
+
+/* BIG VALUE */
+.value {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.cardDark .value {
+  color: white;
+}
+
+.unit {
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+/* DELTA */
+.delta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  margin-top: var(--space-1);
+}
+
+.deltaNegative {
+  color: var(--color-danger);
+}
+
+.deltaPositive {
+  color: var(--color-success);
+}
+
+.deltaValue {
+  font-weight: 600;
+}
+
+.deltaLabel {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.cardDark .deltaLabel {
+  color: rgba(255,255,255,0.5);
+}

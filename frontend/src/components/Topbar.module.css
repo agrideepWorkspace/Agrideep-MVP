@@ -1,0 +1,153 @@
+/* src/components/Topbar.module.css */
+
+.topbar {
+  height: var(--topbar-height);
+  background: var(--color-bg-light);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+  position: sticky;  /* sticks to top of the main area while scrolling */
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(8px); /* frosted glass effect on scroll */
+}
+
+/* ── BREADCRUMB ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.breadcrumbHome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.breadcrumbHome:hover {
+  color: var(--color-text);
+}
+
+.breadcrumbSep {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.breadcrumbCurrent {
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+/* ── SEARCH ── */
+.searchWrapper {
+  flex: 1;          /* takes all available space between breadcrumb and actions */
+  max-width: 360px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text-muted);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.searchWrapper:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.12);
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* ── ACTIONS ── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.iconBtn {
+  position: relative;
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-color: var(--color-border-dark);
+}
+
+.btnLabel {
+  font-size: var(--font-size-sm);
+}
+
+/* Red notification dot on the bell icon */
+.notifDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: var(--color-danger);
+  border-radius: 50%;
+  border: 1.5px solid var(--color-bg-light);
+}
+
+/* Primary CTA button */
+.exportBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.exportBtn:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px); /* subtle lift effect */
+}
+
+.exportBtn:active {
+  transform: translateY(0);
+}
