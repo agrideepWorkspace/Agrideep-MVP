@@ -10,6 +10,8 @@ import styles from './ParcelSelectionPage.module.css'
 const INITIAL_CENTER = [-3.7849, 37.7749]
 const EARTH_RADIUS_M = 6371008.8
 const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] }
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
+  .replace(/\/+$/, '')
 
 setWorkerUrl(mapLibreWorkerUrl)
 
@@ -98,6 +100,8 @@ function ParcelSelectionPage() {
   const [isMapLoaded, setIsMapLoaded] = useState(false)
   const [mapError, setMapError] = useState('')
   const [drawMessage, setDrawMessage] = useState('')
+  const [saveError, setSaveError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
 
   const syncFeatures = useCallback(() => {
     const source = mapRef.current?.getSource('parcel-geometry')
@@ -251,8 +255,51 @@ function ParcelSelectionPage() {
     syncFeatures()
   }
 
-  function handleSave(_formData) {
-    navigate('/analysis/olive-grove-a')
+  async function handleSave(formData) {
+    const geometry = boundaryRef.current?.geometry
+    if (!geometry || drawingRef.current) {
+      setSaveError('Draw a parcel boundary before saving.')
+      return
+    }
+
+    setIsSaving(true)
+    setSaveError('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/parcels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.parcelName.trim(),
+          geometry,
+        }),
+      })
+      const responseText = await response.text()
+      let responseData = null
+
+      if (responseText) {
+        try {
+          responseData = JSON.parse(responseText)
+        } catch {
+          responseData = null
+        }
+      }
+
+      if (!response.ok) {
+        const message = responseData?.error?.message
+          || responseData?.message
+          || `Parcel save failed (${response.status} ${response.statusText}).`
+        throw new Error(message)
+      }
+
+      navigate(`/analysis/${responseData?.id ?? 'olive-grove-a'}`)
+    } catch (error) {
+      setSaveError(error instanceof Error
+        ? `Could not save parcel: ${error.message}`
+        : 'Could not save parcel due to an unexpected error.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -321,8 +368,10 @@ function ParcelSelectionPage() {
       <ParcelSetupPanel
         areaHa={areaHa}
         perimeterM={perimeterM}
-        boundarySet={boundary}
+        boundarySet={boundary && !isDrawing}
         onSave={handleSave}
+        isSaving={isSaving}
+        saveError={saveError}
       />
     </div>
   )

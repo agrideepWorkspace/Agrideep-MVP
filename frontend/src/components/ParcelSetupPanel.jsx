@@ -60,6 +60,8 @@ function ParcelSetupPanel({
   perimeterM = null,
   boundarySet = false,
   onSave,
+  isSaving = false,
+  saveError = '',
 }) {
   // ── FORM STATE ──────────────────────────────────────────────
   // Each useState manages ONE piece of state.
@@ -251,8 +253,13 @@ function ParcelSetupPanel({
 
       {/* ACTION BUTTONS */}
       <div className={styles.actions}>
-        <button className={styles.saveBtn} onClick={handleSave}>
-          💾 Save Parcel &amp; Run Analysis
+        {saveError && (
+          <p className={styles.saveError} role="alert">
+            {saveError}
+          </p>
+        )}
+        <button className={styles.saveBtn} onClick={handleSave} disabled={isSaving}>
+          {isSaving ? 'Saving parcel…' : '💾 Save Parcel & Run Analysis'}
         </button>
         <button className={styles.cancelBtn}>Cancel Changes</button>
         <p className={styles.versionTag}>AGRIDEEP V2.4.0 • SCIENCE CORE ENGINE</p>
