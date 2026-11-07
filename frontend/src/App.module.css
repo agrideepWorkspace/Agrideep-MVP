@@ -1,0 +1,55 @@
+/* ============================================================
+   src/App.module.css — Layout shell styles
+   ============================================================
+
+   WHAT ARE CSS MODULES?
+   A CSS Module is a regular .css file BUT with a superpower:
+   every class name is automatically made UNIQUE by Vite at build time.
+
+   For example, you write: .appShell { display: flex }
+   Vite transforms it to:  .App_appShell__xK7y9 { display: flex }
+   (a hashed unique name)
+
+   This means:
+   ✅ You can use simple class names like .container, .title in every component
+   ✅ They will NEVER accidentally conflict with each other
+   ✅ You get component-scoped styles without any special library
+
+   HOW TO USE:
+   In your JSX file:
+     import styles from './App.module.css'
+     <div className={styles.appShell}>   ← notice: styles.appShell not just "appShell"
+
+   The {styles.appShell} is a JavaScript object property access — not a string.
+   ============================================================ */
+
+/* The overall app grid:
+   Sidebar (fixed width) | Main area (takes remaining space)
+   We use CSS Grid with two columns.
+   --sidebar-width is our CSS variable from index.css
+*/
+.appShell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  /* 1fr = "one fraction of the remaining space" — fills the rest */
+  min-height: 100vh;
+  /* 100vh = 100% of the viewport height — full screen */
+}
+
+/* The main area (right of sidebar):
+   Stacks Topbar on top, page content below it.
+   We use flexbox with column direction (vertical stacking).
+*/
+.mainArea {
+  display: flex;
+  flex-direction: column; /* stack children vertically */
+  min-height: 100vh;
+  overflow: hidden; /* prevents double scrollbars */
+}
+
+/* The page content area scrolls independently */
+.pageContent {
+  flex: 1; /* takes all remaining vertical space after the topbar */
+  overflow-y: auto; /* enables vertical scroll when content overflows */
+  position: relative;
+}

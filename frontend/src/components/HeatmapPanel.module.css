@@ -1,0 +1,76 @@
+/* src/components/HeatmapPanel.module.css */
+.panel {
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+.header {}
+.title { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text); }
+.subtitle { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: 2px; }
+
+.mapWrapper {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  aspect-ratio: 4/3;
+}
+.mapImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.latestBadge {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  background: rgba(0,0,0,0.65);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.scaleSection {}
+.scaleHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2); }
+.scaleLabel { font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.06em; }
+.scaleBar {
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(to right, #EF4444, #F59E0B, #EAB308, #84CC16, #22C55E);
+}
+.scaleRange {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+.mapBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.mapBtn:hover {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent);
+}

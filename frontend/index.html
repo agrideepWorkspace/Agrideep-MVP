@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      VIEWPORT META TAG
+      This tells the browser: "Don't zoom out on mobile. Use the device width as the page width."
+      Without this, mobile browsers would render the page as if it were a desktop, then zoom out.
+      width=device-width  → page width = device screen width
+      initial-scale=1.0   → start at 100% zoom (no auto-zoom)
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO: appears in browser tabs and Google search results -->
+    <title>AgriDeep — Satellite Orchard Monitoring</title>
+    <meta name="description" content="AgriDeep MVP: satellite monitoring of olive orchards. Draw parcels, analyze Sentinel-2 NDVI/NDMI imagery, and download spatial reports." />
+
+    <!--
+      FAVICON: the small icon in the browser tab.
+      /vite.svg is the default Vite icon in the /public folder.
+      We keep it for now — you can replace it with your own .ico or .png later.
+    -->
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!--
+      GOOGLE FONTS: loads the "Inter" font family from Google's CDN.
+      Inter is a clean, modern sans-serif font — perfect for dashboards.
+      display=swap means: show system font first (fast), then swap to Inter when loaded.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!--
+      THE REACT MOUNT POINT
+      This <div id="root"> is where React will inject your entire application.
+      At startup, this div is empty. React takes over and fills it with your components.
+      Think of it as the "socket" that React plugs into.
+    -->
+    <div id="root"></div>
+
+    <!--
+      SCRIPT MODULE: loads our React app entry point (src/main.jsx).
+      type="module" enables modern ES Modules (import/export syntax).
+      Vite's dev server handles this automatically during development.
+    -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
