@@ -1,0 +1,40 @@
+# Runs the backend API with a PostgreSQL database with PostGIS.
+#   docker compose up --build
+# Values can be changed in a .env file next to this one (see .env.example).
+
+services:
+  db:
+    # Same image as the backend tests (TestcontainersConfiguration).
+    image: postgis/postgis:17-3.6-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agrideep}
+      POSTGRES_USER: ${POSTGRES_USER:-agrideep}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agrideep}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      # Reachable only from this machine, for tools such as psql or DBeaver.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-agrideep}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-agrideep}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-agrideep}
+    ports:
+      # The frontend calls http://localhost:8000 by default (VITE_API_BASE_URL).
+      - "${BACKEND_PORT:-8000}:8000"
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
