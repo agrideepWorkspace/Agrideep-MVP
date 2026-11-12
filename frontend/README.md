@@ -22,8 +22,6 @@ The request body is the parcel name and the GeoJSON Polygon geometry:
 
 The backend should return `201 Created` with the saved parcel object, including its `id`. A failed request is shown in the parcel form; the app does not navigate as if saving succeeded.
 
-The backend folder in this repository currently has no Spring application, so run that service separately before expecting parcel saves to succeed.
-
 From this directory, run:
 
 ```powershell
@@ -33,4 +31,8 @@ npm run dev
 
 Open the URL printed by Vite. Use **Satellite** or **3D terrain** to switch views. Use **Draw boundary**, click to add corners, then choose **Finish boundary**.
 
-The parcel outline and area/perimeter are calculated in the browser. They are not sent to a satellite-analysis backend; the analysis screens still use sample data.
+Saved parcel lists, parcel detail pages, and analysis jobs load from the Spring API. The browser area and perimeter are estimates; the API recalculates both when the parcel is saved.
+
+From a saved parcel's analysis page, submit an analysis period and cloud threshold to create a queued job. The page polls its real `PENDING`, `RUNNING`, `COMPLETED`, or `FAILED` status. Completed results, observations, generated maps, CSV, and PDF are read from the API; no satellite values are fabricated.
+
+The API and Python worker use RabbitMQ. Start the full stack from the repository root with `docker compose up --build`; copy `.env.example` to `.env` first and configure Earth Engine access for real runs. Without Earth Engine credentials, a submitted job will appear as failed with the worker's explicit authentication error.

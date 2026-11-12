@@ -93,8 +93,7 @@ function App() {
 
               {/*
                 Analysis Dashboard: :id is a URL parameter (dynamic segment).
-                /analysis/olive-grove-a → id = "olive-grove-a"
-                /analysis/sector-g12   → id = "sector-g12"
+                /analysis/{parcel-id} → id = a saved parcel UUID
                 Components can read this with the useParams() hook.
                 We also add a static route without :id for easy navigation.
               */}
@@ -102,7 +101,8 @@ function App() {
               <Route path="/analysis"     element={<AnalysisDashboardPage />} />
 
               {/* Spatial Report Preview */}
-              <Route path="/report/:id" element={<SpatialReportPage />} />
+              <Route path="/report/:parcelId/:jobId" element={<SpatialReportPage />} />
+              <Route path="/report/:id"     element={<SpatialReportPage />} />
               <Route path="/report"     element={<SpatialReportPage />} />
             </Routes>
           </main>

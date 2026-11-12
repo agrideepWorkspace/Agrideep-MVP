@@ -5,14 +5,12 @@ import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import ParcelSetupPanel from '../components/ParcelSetupPanel'
+import { createParcel } from '../api/parcels'
 import styles from './ParcelSelectionPage.module.css'
 
 const INITIAL_CENTER = [-3.7849, 37.7749]
 const EARTH_RADIUS_M = 6371008.8
 const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] }
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
-  .replace(/\/+$/, '')
-
 setWorkerUrl(mapLibreWorkerUrl)
 
 const MAP_STYLE = {
@@ -261,38 +259,20 @@ function ParcelSelectionPage() {
       setSaveError('Draw a parcel boundary before saving.')
       return
     }
+    if (!formData.parcelName.trim()) {
+      setSaveError('Enter a name for the parcel.')
+      return
+    }
 
     setIsSaving(true)
     setSaveError('')
 
     try {
-      const response = await fetch(`${API_BASE_URL}/parcels`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.parcelName.trim(),
-          geometry,
-        }),
+      const parcel = await createParcel({
+        name: formData.parcelName.trim(),
+        geometry,
       })
-      const responseText = await response.text()
-      let responseData = null
-
-      if (responseText) {
-        try {
-          responseData = JSON.parse(responseText)
-        } catch {
-          responseData = null
-        }
-      }
-
-      if (!response.ok) {
-        const message = responseData?.error?.message
-          || responseData?.message
-          || `Parcel save failed (${response.status} ${response.statusText}).`
-        throw new Error(message)
-      }
-
-      navigate(`/analysis/${responseData?.id ?? 'olive-grove-a'}`)
+      navigate(`/analysis/${encodeURIComponent(parcel.id)}`)
     } catch (error) {
       setSaveError(error instanceof Error
         ? `Could not save parcel: ${error.message}`

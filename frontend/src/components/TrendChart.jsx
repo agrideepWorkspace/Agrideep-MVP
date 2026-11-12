@@ -34,7 +34,9 @@ function CustomTooltip({ active, payload, label }) {
       {payload.map((entry) => (
         <p key={entry.dataKey} style={{ color: entry.color }} className={styles.tooltipRow}>
           <span className={styles.tooltipLabel}>{entry.name.toUpperCase()}</span>
-          <span className={styles.tooltipValue}>{entry.value.toFixed(2)}</span>
+          <span className={styles.tooltipValue}>
+            {typeof entry.value === 'number' ? entry.value.toFixed(2) : '—'}
+          </span>
         </p>
       ))}
     </div>
@@ -42,7 +44,7 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 // PROPS:
-//   data → array of { date, ndvi, ndmi } objects from mockData
+//   data → array of { date, ndvi, ndmi } objects from the analysis API
 function TrendChart({ data = [] }) {
   return (
     <div className={styles.wrapper}>
@@ -73,9 +75,8 @@ function TrendChart({ data = [] }) {
             axisLine={false}
           />
 
-          {/* Y axis: shows 0.1 to 0.5 range */}
           <YAxis
-            domain={[0.1, 0.55]}
+            domain={[-1, 1]}
             tick={{ fontSize: 11, fill: '#9CA3AF' }}
             tickLine={false}
             axisLine={false}

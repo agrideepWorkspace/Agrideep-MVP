@@ -31,7 +31,7 @@ function StatusBadge({ status }) {
   return <span className={cls}>{status}</span>
 }
 
-// PROPS: observations → array of row objects from mockData
+// PROPS: observations → array of row objects from the analysis API
 function ObservationsTable({ observations = [] }) {
   // ── LOCAL STATE: active status filter ─────────────────────
   // `filter` holds the currently selected filter: 'All', 'Valid', or 'Masked'
@@ -61,7 +61,7 @@ function ObservationsTable({ observations = [] }) {
       <div className={styles.header}>
         <div>
           <h3 className={styles.title}>Satellite Observations Log</h3>
-          <p className={styles.subtitle}>Historical sensor readings</p>
+          <p className={styles.subtitle}>Observations returned by the satellite engine</p>
         </div>
         {/* FILTER BUTTONS */}
         <div className={styles.filters}>
@@ -90,8 +90,7 @@ function ObservationsTable({ observations = [] }) {
           </thead>
           <tbody>
             {filteredRows.map((row, index) => (
-              // index as key is acceptable here since rows don't reorder
-              <tr key={index} className={styles.row}>
+              <tr key={`${row.date}-${row.sensor}-${index}`} className={styles.row}>
                 <td className={styles.date}>{row.date}</td>
                 <td className={styles.sensor}>{row.sensor}</td>
                 <td><StatusBadge status={row.status} /></td>
@@ -104,11 +103,14 @@ function ObservationsTable({ observations = [] }) {
                 </td>
               </tr>
             ))}
+            {filteredRows.length === 0 && (
+              <tr className={styles.row}>
+                <td colSpan="5">No observations for this filter.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-
-      <button className={styles.loadMore}>Load More Observations</button>
     </div>
   )
 }

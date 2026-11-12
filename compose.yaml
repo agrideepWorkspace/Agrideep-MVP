@@ -1,0 +1,91 @@
+services:
+  db:
+    image: postgis/postgis:17-3.6
+    environment:
+      POSTGRES_DB: agrideep
+      POSTGRES_USER: agrideep
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agrideep}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agrideep -d agrideep"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-agrideep}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-agrideep}
+    ports:
+      - "${RABBITMQ_PORT:-5673}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      SERVER_PORT: 8000
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/agrideep
+      SPRING_DATASOURCE_USERNAME: agrideep
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-agrideep}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-agrideep}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agrideep}
+      SATELLITE_OUTPUT_DIR: /data/output
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - analysis-output:/data/output
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  satellite-worker:
+    build:
+      context: .
+      dockerfile: satellite/Dockerfile
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-agrideep}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agrideep}
+      EE_PROJECT: ${EE_PROJECT:-}
+      EE_SERVICE_ACCOUNT: ${EE_SERVICE_ACCOUNT:-}
+      EE_PRIVATE_KEY_PATH: ${EE_PRIVATE_KEY_PATH:-}
+      GOOGLE_APPLICATION_CREDENTIALS: ${GOOGLE_APPLICATION_CREDENTIALS:-}
+      SATELLITE_MAX_CLOUD_PCT: ${SATELLITE_MAX_CLOUD_PCT:-20}
+      SATELLITE_MIN_AREA_HA: ${SATELLITE_MIN_AREA_HA:-0.1}
+      SATELLITE_MAX_AREA_HA: ${SATELLITE_MAX_AREA_HA:-500}
+      SATELLITE_MAX_PERIOD_MONTHS: ${SATELLITE_MAX_PERIOD_MONTHS:-12}
+      SATELLITE_EARLIEST_DATE: ${SATELLITE_EARLIEST_DATE:-2017-03-28}
+      SATELLITE_PROCESSING_SCALE_M: ${SATELLITE_PROCESSING_SCALE_M:-20}
+      SATELLITE_REQUEST_TIMEOUT_SECONDS: ${SATELLITE_REQUEST_TIMEOUT_SECONDS:-120}
+      SATELLITE_OUTPUT_DIR: /data/output
+    volumes:
+      - analysis-output:/data/output
+      - type: bind
+        source: "${USERPROFILE}/.config/earthengine"
+        target: /root/.config/earthengine
+        read_only: true
+      - ./secrets:/run/secrets:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    name: agrideep-postgres-data
+  analysis-output:

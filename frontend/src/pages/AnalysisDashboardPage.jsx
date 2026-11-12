@@ -1,137 +1,323 @@
-// ============================================================
-// src/pages/AnalysisDashboardPage.jsx — SCREEN 2: DASHBOARD
-// ============================================================
-//
-// WHAT IT DOES: The main analysis view showing:
-//   - Site header (parcel name, date range, status badge)
-//   - 3 KPI cards (NDVI, NDMI, Cloud Coverage)
-//   - NDVI/NDMI line chart (left) + Heatmap panel (right)
-//   - Satellite Observations Log table
-//
-// REACT CONCEPTS:
-//   ✅ Importing and composing multiple components
-//   ✅ Passing props down to children
-//   ✅ useNavigate to wire "Export Report" button
-//   ✅ Data flows top-down (parent → children via props)
-// ============================================================
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
 
-import KpiCard           from '../components/KpiCard'
-import TrendChart        from '../components/TrendChart'
-import HeatmapPanel      from '../components/HeatmapPanel'
+import {
+  createAnalysis,
+  getAnalyses,
+  getAnalysisArtifactUrl,
+  getParcel,
+  getParcels,
+} from '../api/parcels'
 import ObservationsTable from '../components/ObservationsTable'
-import { MOCK_ANALYSIS } from '../data/mockData'
-
+import TrendChart from '../components/TrendChart'
 import styles from './AnalysisDashboardPage.module.css'
 
-// ── SMALL INLINE SVG ICONS used for KPI card icons ────────────
-function IconLeaf({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-    </svg>
-  )
+function toDateInputValue(date) {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return localDate.toISOString().slice(0, 10)
 }
-function IconDroplet({ size = 18 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-    </svg>
-  )
+
+function initialStartDate() {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 6)
+  return toDateInputValue(date)
 }
-function IconCloud({ size = 18 }) {
+
+function SummaryMetric({ label, value, suffix = '' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-    </svg>
+    <div className={styles.metric}>
+      <span>{label}</span>
+      <strong>{value == null ? '—' : `${value}${suffix}`}</strong>
+    </div>
   )
 }
 
-// ── PAGE COMPONENT ────────────────────────────────────────────
-function AnalysisDashboardPage() {
-  // Use mock data (replace with API call later)
-  const data = MOCK_ANALYSIS
+function AnalysisResult({ job }) {
+  const result = job.result
+  const summary = result?.summary
+  const observations = (result?.observations ?? []).map((observation) => ({
+    ...observation,
+    status: observation.valid
+      ? 'Valid'
+      : observation.invalid_reason
+        ? `Masked: ${observation.invalid_reason}`
+        : 'Invalid',
+    sensor: observation.spacecraft || 'Sentinel-2',
+  }))
+  const chartData = observations
+    .filter((observation) => observation.valid)
+    .map(({ date, ndvi, ndmi }) => ({ date, ndvi, ndmi }))
+  const artifacts = result?.artifacts ?? {}
+
+  if (job.status === 'FAILED') {
+    return (
+      <section className={styles.resultNotice} role="alert">
+        <h3>Analysis failed: {job.errorCode || 'processing_error'}</h3>
+        <p>{job.errorMessage || 'The satellite worker could not complete this analysis.'}</p>
+        {result?.error?.message && <p>{result.error.message}</p>}
+      </section>
+    )
+  }
+
+  if (job.status !== 'COMPLETED' || !summary) {
+    return <p className={styles.muted}>Waiting for satellite results…</p>
+  }
 
   return (
-    // The Topbar here overrides the one in App.jsx's layout by passing
-    // page-specific props. The one in App.jsx is the "global" topbar —
-    // but since Topbar is also rendered here, this one takes its place.
-    // Actually: we skip the global topbar for this page since it's already
-    // rendered in App.jsx. We just use the page-specific content below.
-    <div className={styles.page}>
-
-      {/* ── SITE HEADER ─────────────────────────────────── */}
-      <div className={styles.siteHeader}>
-        <div className={styles.siteHeaderLeft}>
-          <span className={styles.siteTag}>🌿 SITE ANALYSIS</span>
-          <h1 className={styles.siteName}>{data.parcelName}</h1>
-          <p className={styles.siteSubtitle}>{data.subtitle}</p>
-        </div>
-        <div className={styles.siteHeaderRight}>
-          <div className={styles.dateRange}>
-            📅 {data.dateRange}
-          </div>
-          <span className="badge badge--success">● {data.status}</span>
-        </div>
+    <div className={styles.result}>
+      <div className={styles.metrics}>
+        <SummaryMetric label="Mean NDVI" value={summary.ndvi_mean?.toFixed(2)} />
+        <SummaryMetric label="Mean NDMI" value={summary.ndmi_mean?.toFixed(2)} />
+        <SummaryMetric label="Valid observations" value={summary.n_valid} />
+        <SummaryMetric label="Mean cloud cover" value={summary.mean_cloud_pct?.toFixed(1)} suffix="%" />
       </div>
 
-      {/* ── CONTENT GRID ─────────────────────────────────── */}
-      <div className={styles.contentGrid}>
+      {result.warnings?.length > 0 && (
+        <ul className={styles.warnings}>
+          {result.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+        </ul>
+      )}
 
-        {/* LEFT COLUMN: KPI cards + chart + table */}
-        <div className={styles.leftCol}>
+      {chartData.length > 0 && <TrendChart data={chartData} />}
+      {observations.length > 0 && <ObservationsTable observations={observations} />}
 
-          {/* KPI CARDS ROW */}
-          <div className={styles.kpiRow}>
-            {/*
-              We pass data as PROPS to KpiCard.
-              KpiCard doesn't know where the data comes from.
-              It just renders whatever props it receives.
-              This makes KpiCard completely reusable across pages.
-            */}
-            <KpiCard
-              title="Mean NDVI"
-              value={data.meanNdvi}
-              delta={data.ndviDelta}
-              icon={<IconLeaf size={16} />}
-            />
-            <KpiCard
-              title="Mean NDMI"
-              value={data.meanNdmi}
-              delta={data.ndmiDelta}
-              icon={<IconDroplet size={16} />}
-            />
-          </div>
+      <div className={styles.artifacts}>
+        {artifacts.report_pdf && (
+          <a href={getAnalysisArtifactUrl(job.id, 'monitoring-report.pdf')} target="_blank" rel="noreferrer">
+            Open satellite report (PDF)
+          </a>
+        )}
+        {artifacts.observations_csv && (
+          <a href={getAnalysisArtifactUrl(job.id, 'observations.csv')} download>
+            Download observations (CSV)
+          </a>
+        )}
+      </div>
 
-          {/* TREND CHART */}
-          {/*
-            We pass `data.trendData` as the `data` prop to TrendChart.
-            TrendChart receives it as: function TrendChart({ data }) { ... }
-            Props flow ONE WAY: parent → child. Never child → parent directly.
-            (For child→parent communication, you pass a callback function as prop)
-          */}
-          <TrendChart data={data.trendData} />
-
-          {/* OBSERVATIONS TABLE */}
-          <ObservationsTable observations={data.observations} />
-        </div>
-
-        {/* RIGHT COLUMN: Cloud coverage card + heatmap */}
-        <div className={styles.rightCol}>
-          <KpiCard
-            title="Cloud Coverage"
-            value={data.cloudCoverage}
-            unit="%"
-            icon={<IconCloud size={16} />}
-            dark={true}
+      {artifacts.ndvi_map_png && (
+        <figure className={styles.mapFigure}>
+          <img
+            src={getAnalysisArtifactUrl(job.id, 'ndvi-map.png')}
+            alt="NDVI map generated from satellite observations"
           />
-          {/* The HeatmapPanel shows the satellite image + color scale */}
-          <HeatmapPanel parcelId="olive-grove-a" />
-        </div>
+          <figcaption>Latest NDVI map · Sentinel-2 analysis output</figcaption>
+        </figure>
+      )}
+    </div>
+  )
+}
+
+function AnalysisDashboardPage() {
+  const { id: parcelId } = useParams()
+  const [response, setResponse] = useState(null)
+  const [retry, setRetry] = useState(0)
+  const [startDate, setStartDate] = useState(initialStartDate)
+  const [endDate, setEndDate] = useState(() => toDateInputValue(new Date()))
+  const [today] = useState(() => toDateInputValue(new Date()))
+  const [maxCloudPct, setMaxCloudPct] = useState('20')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const requestKey = `${parcelId}:${retry}`
+
+  useEffect(() => {
+    const controller = new AbortController()
+    if (!parcelId) {
+      getParcels(controller.signal).then((parcels) => {
+        setResponse({ key: requestKey, parcels })
+      }).catch((error) => {
+        if (!controller.signal.aborted) setResponse({ key: requestKey, error: error.message })
+      })
+
+      return () => controller.abort()
+    }
+
+    Promise.all([
+      getParcel(parcelId, controller.signal),
+      getAnalyses(parcelId, controller.signal),
+    ]).then(([parcel, jobs]) => {
+      setResponse({ key: requestKey, parcel, jobs })
+    }).catch((error) => {
+      if (!controller.signal.aborted) setResponse({ key: requestKey, error: error.message })
+    })
+
+    return () => controller.abort()
+  }, [parcelId, requestKey])
+
+  const currentResponse = response?.key === requestKey ? response : null
+  const jobs = currentResponse?.jobs ?? []
+  const hasActiveJobs = jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING')
+
+  useEffect(() => {
+    if (!hasActiveJobs) return undefined
+
+    const timer = window.setInterval(() => {
+      getAnalyses(parcelId).then((updatedJobs) => {
+        setResponse((current) => current?.key === requestKey
+          ? { ...current, jobs: updatedJobs }
+          : current)
+      }).catch((error) => setSubmitError(`Could not refresh analysis status: ${error.message}`))
+    }, 3000)
+
+    return () => window.clearInterval(timer)
+  }, [hasActiveJobs, parcelId, requestKey])
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      const job = await createAnalysis(parcelId, {
+        startDate,
+        endDate,
+        maxCloudPct: Number(maxCloudPct),
+      })
+      setResponse((current) => current?.key === requestKey
+        ? { ...current, jobs: [job, ...current.jobs] }
+        : current)
+    } catch (error) {
+      setSubmitError(error.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (currentResponse?.error) {
+    return (
+      <div className={styles.page}>
+        <section className={styles.notice} role="alert">
+          <h1>Could not load parcel</h1>
+          <p>{currentResponse.error}</p>
+          <button className={styles.actionLink} onClick={() => setRetry((value) => value + 1)}>
+            Try again
+          </button>
+        </section>
       </div>
+    )
+  }
+
+  if (!currentResponse?.parcel) {
+    if (!parcelId && currentResponse?.parcels) {
+      return (
+        <div className={styles.page}>
+          <header className={styles.siteHeader}>
+            <div className={styles.siteHeaderLeft}>
+              <span className={styles.siteTag}>PARCELS</span>
+              <h1 className={styles.siteName}>Saved parcels</h1>
+              <p className={styles.siteSubtitle}>
+                Select a saved parcel to view its analysis history or start a new analysis.
+              </p>
+            </div>
+            <Link className={styles.actionLink} to="/parcels/new">Create parcel</Link>
+          </header>
+          {currentResponse.parcels.length === 0 ? (
+            <section className={styles.notice}>
+              <h2>No saved parcels yet</h2>
+              <p>Create a parcel to save its boundary and run satellite analyses.</p>
+            </section>
+          ) : (
+            <ul className={styles.parcelList}>
+              {currentResponse.parcels.map((savedParcel) => (
+                <li className={styles.parcelItem} key={savedParcel.id}>
+                  <div>
+                    <h2>{savedParcel.name}</h2>
+                    <p>
+                      {Number(savedParcel.areaHa).toFixed(2)} ha
+                      {' · '}
+                      {Number(savedParcel.perimeterM).toLocaleString()} m perimeter
+                    </p>
+                  </div>
+                  <Link
+                    className={styles.actionLink}
+                    to={`/analysis/${encodeURIComponent(savedParcel.id)}`}
+                  >
+                    Open parcel
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )
+    }
+    return <div className={styles.page} role="status">Loading parcel and analysis history…</div>
+  }
+
+  const { parcel } = currentResponse
+
+  return (
+    <div className={styles.page}>
+      <header className={styles.siteHeader}>
+        <div className={styles.siteHeaderLeft}>
+          <span className={styles.siteTag}>SAVED PARCEL</span>
+          <h1 className={styles.siteName}>{parcel.name}</h1>
+          <p className={styles.siteSubtitle}>
+            {Number(parcel.areaHa).toFixed(2)} ha · {Number(parcel.perimeterM).toLocaleString()} m perimeter
+          </p>
+        </div>
+        <Link className={styles.actionLink} to="/analysis">All parcels</Link>
+      </header>
+
+      <section className={styles.analysisFormSection}>
+        <h2>Start satellite analysis</h2>
+        <p>
+          The worker uses Sentinel-2 imagery from Google Earth Engine. Requests need
+          configured Earth Engine access; no sample observations are used.
+        </p>
+        <form className={styles.analysisForm} onSubmit={handleSubmit}>
+          <label>
+            Start date
+            <input type="date" value={startDate} max={endDate} required
+              onChange={(event) => setStartDate(event.target.value)} />
+          </label>
+          <label>
+            End date
+            <input type="date" value={endDate} min={startDate}
+              max={today} required
+              onChange={(event) => setEndDate(event.target.value)} />
+          </label>
+          <label>
+            Maximum cloud cover
+            <span className={styles.cloudInput}>
+              <input type="number" value={maxCloudPct} min="0" max="100" step="1" required
+                onChange={(event) => setMaxCloudPct(event.target.value)} />
+              %
+            </span>
+          </label>
+          <button className={styles.actionLink} type="submit" disabled={submitting}>
+            {submitting ? 'Submitting…' : 'Start analysis'}
+          </button>
+        </form>
+        {submitError && <p className={styles.error} role="alert">{submitError}</p>}
+      </section>
+
+      <section className={styles.jobsSection}>
+        <h2>Analysis jobs</h2>
+        {jobs.length === 0 ? (
+          <p className={styles.muted}>No analysis requests for this parcel yet.</p>
+        ) : (
+          <div className={styles.jobs}>
+            {jobs.map((job) => (
+              <article className={styles.jobCard} key={job.id}>
+                <header className={styles.jobHeader}>
+                  <div>
+                    <h3>{job.startDate} – {job.endDate}</h3>
+                    <p>Created {new Date(job.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className={`${styles.jobStatus} ${styles[`status${job.status}`] ?? ''}`}>
+                    {job.status}
+                  </span>
+                </header>
+                <AnalysisResult job={job} />
+                {job.status === 'COMPLETED' && (
+                  <Link className={styles.actionLink} to={`/report/${parcelId}/${job.id}`}>
+                    Open report
+                  </Link>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }

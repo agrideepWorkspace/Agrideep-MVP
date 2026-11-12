@@ -1,41 +1,172 @@
-import { useNavigate } from 'react-router-dom'
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
-import { MOCK_REPORT } from '../data/mockData'
+import { getAnalyses, getAnalysis, getAnalysisArtifactUrl, getParcel, getParcels } from '../api/parcels'
+import ObservationsTable from '../components/ObservationsTable'
+import TrendChart from '../components/TrendChart'
 import styles from './SpatialReportPage.module.css'
 
 function SpatialReportPage() {
+  const { parcelId, jobId } = useParams()
   const navigate = useNavigate()
-  const { parcel, kpis, historicalData, methodology } = MOCK_REPORT
+  const [response, setResponse] = useState(null)
+  const [retry, setRetry] = useState(0)
+  const requestKey = `${parcelId ?? ''}:${jobId ?? ''}:${retry}`
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let load
+    if (jobId) {
+      load = getAnalysis(jobId, controller.signal).then((job) => {
+        if (job.parcelId !== parcelId) {
+          throw new Error('This analysis does not belong to the requested parcel.')
+        }
+        setResponse({ key: requestKey, job })
+      })
+    } else if (parcelId) {
+      load = Promise.all([
+        getParcel(parcelId, controller.signal),
+        getAnalyses(parcelId, controller.signal),
+      ]).then(([parcel, jobs]) => setResponse({ key: requestKey, parcel, jobs }))
+    } else {
+      load = getParcels(controller.signal).then((parcels) => setResponse({ key: requestKey, parcels }))
+    }
+
+    load.catch((error) => {
+      if (!controller.signal.aborted) setResponse({ key: requestKey, error: error.message })
+    })
+
+    return () => controller.abort()
+  }, [parcelId, jobId, requestKey])
+
+  const currentResponse = response?.key === requestKey ? response : null
+  const error = currentResponse?.error
+  const data = currentResponse?.job
+  const results = data?.result
+  const summary = results?.summary
+  const observations = (results?.observations ?? []).map((observation) => ({
+    ...observation,
+    status: observation.valid
+      ? 'Valid'
+      : observation.invalid_reason
+        ? `Masked: ${observation.invalid_reason}`
+        : 'Invalid',
+    sensor: observation.spacecraft || 'Sentinel-2',
+  }))
+  const chartData = observations
+    .filter((observation) => observation.valid)
+    .map(({ date, ndvi, ndmi }) => ({ date, ndvi, ndmi }))
+  const artifacts = results?.artifacts ?? {}
 
   function handlePrint() {
     window.print()
+  }
+
+  if (error) {
+    return (
+      <div className={styles.page}>
+        <section className={styles.notice} role="alert">
+          <h1>Could not load report data</h1>
+          <p>{error}</p>
+          <button className={styles.primaryButton} onClick={() => setRetry((value) => value + 1)}>
+            Try again
+          </button>
+        </section>
+      </div>
+    )
+  }
+
+  if (!currentResponse) {
+    return <div className={styles.page} role="status">Loading report data from the API…</div>
+  }
+
+  if (!parcelId && currentResponse.parcels) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.toolbar}>
+          <div>
+            <p className={styles.eyebrow}>REPORTS</p>
+            <h1 className={styles.pageTitle}>Choose a parcel</h1>
+            <p className={styles.pageSubtitle}>Select a parcel to view its real analysis jobs.</p>
+          </div>
+        </header>
+        {currentResponse.parcels.length === 0 ? (
+          <section className={styles.notice}>
+            <h2>No saved parcels</h2>
+            <Link className={styles.primaryButton} to="/parcels/new">Create a parcel</Link>
+          </section>
+        ) : (
+          <ul className={styles.parcelList}>
+            {currentResponse.parcels.map((parcel) => (
+              <li className={styles.parcelItem} key={parcel.id}>
+                <div>
+                  <h2>{parcel.name}</h2>
+                  <p>{Number(parcel.areaHa).toFixed(2)} ha</p>
+                </div>
+                <Link className={styles.primaryButton} to={`/report/${parcel.id}`}>
+                  View analysis jobs
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+
+  if (parcelId && !jobId && currentResponse.jobs) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.toolbar}>
+          <div>
+            <p className={styles.eyebrow}>REPORTS</p>
+            <h1 className={styles.pageTitle}>{currentResponse.parcel.name}</h1>
+            <p className={styles.pageSubtitle}>Select a completed analysis to view its report.</p>
+          </div>
+          <div className={styles.actions}>
+            <button className={styles.secondaryButton} onClick={() => navigate(-1)}>Back</button>
+            <Link className={styles.primaryButton} to={`/analysis/${parcelId}`}>Start analysis</Link>
+          </div>
+        </header>
+        {currentResponse.jobs.length === 0 ? (
+          <section className={styles.notice}>
+            <h2>No analysis jobs</h2>
+            <p>Start a satellite analysis for this parcel to generate a report.</p>
+          </section>
+        ) : (
+          <ul className={styles.parcelList}>
+            {currentResponse.jobs.map((job) => (
+              <li className={styles.parcelItem} key={job.id}>
+                <div>
+                  <h2>{job.startDate} – {job.endDate}</h2>
+                  <p>Status: {job.status}{job.errorMessage ? ` · ${job.errorMessage}` : ''}</p>
+                </div>
+                {job.status === 'COMPLETED' && (
+                  <Link className={styles.primaryButton} to={`/report/${parcelId}/${job.id}`}>
+                    Open report
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
   }
 
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
         <div>
-          <p className={styles.eyebrow}>REPORT PREVIEW</p>
-          <h1 className={styles.pageTitle}>Spatial Report</h1>
-          <p className={styles.pageSubtitle}>Generated analysis for {parcel.name}</p>
+          <p className={styles.eyebrow}>SATELLITE REPORT</p>
+          <h1 className={styles.pageTitle}>{data.parcelName}</h1>
+          <p className={styles.pageSubtitle}>{data.startDate} – {data.endDate}</p>
         </div>
         <div className={styles.actions}>
-          <button className={styles.secondaryButton} onClick={() => navigate(-1)}>
-            Back
-          </button>
-          <button className={styles.primaryButton} onClick={handlePrint}>
-            Print or save as PDF
-          </button>
+          <button className={styles.secondaryButton} onClick={() => navigate(-1)}>Back</button>
+          {data.status === 'COMPLETED' && (
+            <button className={styles.primaryButton} onClick={handlePrint}>Print or save as PDF</button>
+          )}
         </div>
       </div>
 
@@ -44,97 +175,96 @@ function SpatialReportPage() {
           <div className={styles.brand}>
             <span className={styles.brandMark} aria-hidden="true">A</span>
             <div>
-              <strong>AgriDeep Grove Monitor</strong>
-              <span>SPATIAL ANALYSIS DIVISION</span>
+              <strong>AgriDeep Satellite Monitoring</strong>
+              <span>REAL WORKER OUTPUT</span>
             </div>
           </div>
           <div className={styles.reportId}>
-            <span>REPORT ID</span>
-            <strong>{MOCK_REPORT.reportId}</strong>
+            <span>ANALYSIS JOB</span>
+            <strong>{data.id}</strong>
+            <span>STATUS: {data.status}</span>
           </div>
         </header>
 
-        <section className={styles.intro}>
-          <p className={styles.eyebrow}>VEGETATION MONITORING</p>
-          <h2>Vegetation Health &amp; Spatial Analysis</h2>
-          <p>Generated {MOCK_REPORT.generatedDate} · Analyst: {MOCK_REPORT.analystName}</p>
-        </section>
+        {data.status === 'PENDING' || data.status === 'RUNNING' ? (
+          <section className={styles.notice}>
+            <h2>Analysis is {data.status.toLowerCase()}</h2>
+            <p>The satellite worker has not finished this job. Refresh this page to check for results.</p>
+          </section>
+        ) : data.status === 'FAILED' ? (
+          <section className={styles.notice} role="alert">
+            <h2>Analysis failed: {data.errorCode || 'processing_error'}</h2>
+            <p>{data.errorMessage || 'The satellite worker could not complete this analysis.'}</p>
+          </section>
+        ) : (
+          <>
+            <section className={styles.intro}>
+              <p className={styles.eyebrow}>SENTINEL-2 VEGETATION MONITORING</p>
+              <h2>{data.parcelName}</h2>
+              <p>Analysis period: {data.startDate} – {data.endDate}</p>
+            </section>
 
-        <section className={styles.overview}>
-          <div>
-            <h3 className={styles.sectionTitle}>Site Information</h3>
-            <dl className={styles.siteDetails}>
-              <div><dt>Parcel name</dt><dd>{parcel.name}</dd></div>
-              <div><dt>Location</dt><dd>{parcel.location}</dd></div>
-              <div><dt>Coordinates</dt><dd>{parcel.coordinates}</dd></div>
-              <div><dt>Crop</dt><dd>{parcel.crop}</dd></div>
-            </dl>
-          </div>
+            {summary && (
+              <section className={styles.kpiPanel}>
+                <h3 className={styles.sectionTitle}>Summary from satellite observations</h3>
+                <div className={styles.summaryGrid}>
+                  <div><span>Mean NDVI</span><strong>{summary.ndvi_mean?.toFixed(2) ?? '—'}</strong></div>
+                  <div><span>Mean NDMI</span><strong>{summary.ndmi_mean?.toFixed(2) ?? '—'}</strong></div>
+                  <div><span>Valid observations</span><strong>{summary.n_valid ?? '—'}</strong></div>
+                  <div><span>Mean cloud cover</span><strong>{summary.mean_cloud_pct?.toFixed(1) ?? '—'}%</strong></div>
+                </div>
+              </section>
+            )}
 
-          <div className={styles.kpiPanel}>
-            <h3 className={styles.sectionTitle}>Key Performance Indicators</h3>
-            <div className={styles.kpiRow}>
-              <span>Mean NDVI</span>
-              <strong>{kpis.meanNdvi.toFixed(2)} <small>({kpis.ndviDelta > 0 ? '+' : ''}{kpis.ndviDelta}%)</small></strong>
-            </div>
-            <div className={styles.kpiRow}>
-              <span>Mean NDMI</span>
-              <strong>{kpis.meanNdmi.toFixed(2)} <small>({kpis.ndmiDelta > 0 ? '+' : ''}{kpis.ndmiDelta}%)</small></strong>
-            </div>
-            <div className={styles.kpiRow}>
-              <span>Vegetation coverage</span>
-              <strong>{kpis.vegCoverage}% <small>({kpis.vegCoverageDelta > 0 ? '+' : ''}{kpis.vegCoverageDelta}%)</small></strong>
-            </div>
-          </div>
-        </section>
+            {results?.warnings?.length > 0 && (
+              <section className={styles.notice}>
+                <h3 className={styles.sectionTitle}>Processing notes</h3>
+                <ul>{results.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+              </section>
+            )}
 
-        <section className={styles.summary}>
-          <h3 className={styles.sectionTitle}>Executive Summary</h3>
-          <p>{MOCK_REPORT.executiveSummary}</p>
-        </section>
+            {chartData.length > 0 && <TrendChart data={chartData} />}
+            {observations.length > 0 && <ObservationsTable observations={observations} />}
 
-        <section className={styles.chartSection}>
-          <h3 className={styles.sectionTitle}>Historical Index Variance</h3>
-          <p className={styles.sectionDescription}>Six-month trend comparing vegetation health and moisture</p>
-          <div className={styles.chart}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historicalData} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
-                <CartesianGrid stroke="#e5e7eb" strokeDasharray="4 4" vertical={false} />
-                <XAxis dataKey="month" tickLine={false} axisLine={false} />
-                <YAxis domain={[0, 1]} tickLine={false} axisLine={false} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="ndvi" name="NDVI (Health)" stroke="#2d6a4f" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="ndmi" name="NDMI (Moisture)" stroke="#3995b8" strokeWidth={2.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
+            {artifacts.ndvi_map_png && (
+              <figure className={styles.mapFigure}>
+                <img
+                  src={getAnalysisArtifactUrl(data.id, 'ndvi-map.png')}
+                  alt="NDVI map generated from Sentinel-2 data"
+                />
+                <figcaption>NDVI map generated by the satellite worker</figcaption>
+              </figure>
+            )}
 
-        <section className={styles.methodology}>
-          <div>
-            <h3 className={styles.sectionTitle}>Methodology Details</h3>
-            <dl className={styles.methodList}>
-              <div><dt>Satellite constellation</dt><dd>{methodology.satellite}</dd></div>
-              <div><dt>Index calculation</dt><dd>{methodology.indexCalc}</dd></div>
-            </dl>
-            <h3 className={styles.sectionTitle}>Technical Certifications</h3>
-            <div className={styles.certifications}>
-              {MOCK_REPORT.certifications.map((certification) => (
-                <span key={certification}>{certification}</span>
-              ))}
-            </div>
-          </div>
-          <aside className={styles.limits}>
-            <h3>Report limitations</h3>
-            <p>{methodology.limitations}</p>
-          </aside>
-        </section>
+            <section className={styles.artifacts}>
+              <h3 className={styles.sectionTitle}>Generated files</h3>
+              {artifacts.report_pdf && (
+                <a href={getAnalysisArtifactUrl(data.id, 'monitoring-report.pdf')} target="_blank" rel="noreferrer">
+                  Open generated PDF report
+                </a>
+              )}
+              {artifacts.observations_csv && (
+                <a href={getAnalysisArtifactUrl(data.id, 'observations.csv')} download>
+                  Download observations CSV
+                </a>
+              )}
+              {!artifacts.report_pdf && !artifacts.observations_csv && (
+                <p>No downloadable artifacts were returned by the worker.</p>
+              )}
+            </section>
 
-        <footer className={styles.reportFooter}>
-          <span>© 2026 AgriDeep · Satellite analysis for informed decisions</span>
-          <span>{MOCK_REPORT.reportId}</span>
-        </footer>
+            {results?.metadata && (
+              <section className={styles.methodology}>
+                <h3 className={styles.sectionTitle}>Processing metadata</h3>
+                <dl>
+                  <div><dt>Source</dt><dd>{results.metadata.source}</dd></div>
+                  <div><dt>Processing scale</dt><dd>{results.metadata.processing_scale_m} m</dd></div>
+                  <div><dt>Maximum cloud coverage</dt><dd>{results.metadata.max_cloud_pct}%</dd></div>
+                </dl>
+              </section>
+            )}
+          </>
+        )}
       </article>
     </div>
   )
