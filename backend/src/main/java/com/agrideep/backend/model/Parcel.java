@@ -33,6 +33,9 @@ public class Parcel {
 	@Column(nullable = false, length = MAX_NAME_LENGTH)
 	private String name;
 
+	@Column(name = "owner_id", length = 255)
+	private String ownerId;
+
 	/** The boundary as a PostGIS polygon in WGS 84 longitude and latitude. */
 	@Column(nullable = false, columnDefinition = "geometry(Polygon, 4326)")
 	private Polygon geometry;

@@ -15,6 +15,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,8 +35,8 @@ public class AnalysisController {
 
 	@PostMapping("/parcels/{parcelId}/analyses")
 	public ResponseEntity<AnalysisJobResponse> create(@PathVariable UUID parcelId,
-			@Valid @RequestBody CreateAnalysisRequest request) {
-		AnalysisJobResponse job = analysisJobService.create(parcelId, request);
+			@Valid @RequestBody CreateAnalysisRequest request, @AuthenticationPrincipal Jwt jwt) {
+		AnalysisJobResponse job = analysisJobService.create(parcelId, request, jwt.getSubject());
 		URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
 				.path("/analyses/{id}")
 				.buildAndExpand(job.getId())
@@ -43,18 +45,19 @@ public class AnalysisController {
 	}
 
 	@GetMapping("/parcels/{parcelId}/analyses")
-	public List<AnalysisJobResponse> listForParcel(@PathVariable UUID parcelId) {
-		return analysisJobService.listForParcel(parcelId);
+	public List<AnalysisJobResponse> listForParcel(@PathVariable UUID parcelId, @AuthenticationPrincipal Jwt jwt) {
+		return analysisJobService.listForParcel(parcelId, jwt.getSubject());
 	}
 
 	@GetMapping("/analyses/{id}")
-	public AnalysisJobResponse get(@PathVariable UUID id) {
-		return analysisJobService.get(id);
+	public AnalysisJobResponse get(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+		return analysisJobService.get(id, jwt.getSubject());
 	}
 
 	@GetMapping("/analyses/{id}/artifacts/{name}")
-	public ResponseEntity<Resource> artifact(@PathVariable UUID id, @PathVariable String name) {
-		Resource resource = analysisArtifactService.getArtifact(id, name);
+	public ResponseEntity<Resource> artifact(@PathVariable UUID id, @PathVariable String name,
+			@AuthenticationPrincipal Jwt jwt) {
+		Resource resource = analysisArtifactService.getArtifact(id, name, jwt.getSubject());
 		String filename = resource.getFilename();
 		MediaType mediaType = MediaTypeFactory.getMediaType(filename).orElse(MediaType.APPLICATION_OCTET_STREAM);
 		return ResponseEntity.ok()

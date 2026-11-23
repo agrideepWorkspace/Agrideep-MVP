@@ -1,5 +1,7 @@
 package com.agrideep.backend.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,6 +20,8 @@ import com.agrideep.backend.repository.ObservationRepository;
 import com.agrideep.backend.repository.ParcelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
@@ -30,8 +34,9 @@ public class ObservationService {
 	private final ParcelRepository parcelRepository;
 	private final AnalysisJobRepository analysisJobRepository;
 	private final ObservationRepository observationRepository;
-	private final ArtifactStorage artifactStorage;
 	private final ObjectMapper objectMapper;
+	@Value("${agrideep.analysis.output-directory:data/output}")
+	private Path outputDirectory;
 
 	@Transactional
 	public void upsertCompleted(UUID jobId, JsonNode result) {
@@ -109,8 +114,9 @@ public class ObservationService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ObservationResponse> list(UUID parcelId, LocalDate from, LocalDate to, boolean validOnly) {
-		if (!parcelRepository.existsById(parcelId)) {
+	public List<ObservationResponse> list(UUID parcelId, LocalDate from, LocalDate to, boolean validOnly,
+			String ownerId) {
+		if (!parcelRepository.existsByIdAndOwnerId(parcelId, ownerId)) {
 			throw new ParcelNotFoundException(parcelId);
 		}
 		return observationRepository.findTimeline(parcelId, from, to, validOnly).stream()
@@ -140,21 +146,30 @@ public class ObservationService {
 	}
 
 	@Transactional(readOnly = true)
-	public Resource overlay(UUID parcelId, UUID observationId, String index) {
+	public Resource overlay(UUID parcelId, UUID observationId, String index, String ownerId) {
 		String normalized = index.toLowerCase(Locale.ROOT);
 		if (!normalized.equals("ndvi") && !normalized.equals("ndmi")) {
 			throw new AnalysisArtifactNotFoundException();
 		}
-		if (!parcelRepository.existsById(parcelId)) {
+		if (!parcelRepository.existsByIdAndOwnerId(parcelId, ownerId)) {
 			throw new ParcelNotFoundException(parcelId);
 		}
 		Observation observation = observationRepository.findByIdAndParcel_Id(observationId, parcelId)
 				.orElseThrow(AnalysisArtifactNotFoundException::new);
 		String key = normalized.equals("ndvi") ? observation.getNdviOverlayKey() : observation.getNdmiOverlayKey();
-		if (key == null || !artifactStorage.exists(key)) {
+		if (key == null) {
 			throw new AnalysisArtifactNotFoundException();
 		}
-		return artifactStorage.load(key);
+		Path jobDirectory = outputDirectory.resolve(observation.getJobId().toString()).normalize();
+		Path artifact = jobDirectory.resolve(key.substring(key.indexOf('/') + 1)).normalize();
+		if (!artifact.startsWith(jobDirectory) || !Files.isRegularFile(artifact)) {
+			throw new AnalysisArtifactNotFoundException();
+		}
+		try {
+			return new FileSystemResource(artifact.toRealPath());
+		} catch (IOException exception) {
+			throw new AnalysisArtifactNotFoundException();
+		}
 	}
 
 	public java.util.Optional<java.time.LocalDate> latestDate(UUID parcelId) {

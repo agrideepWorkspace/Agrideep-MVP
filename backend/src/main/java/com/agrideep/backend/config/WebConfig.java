@@ -19,7 +19,7 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addMapping("/**")
 				.allowedOrigins(corsProperties.getAllowedOrigins().toArray(String[]::new))
 				.allowedMethods("GET", "POST", "DELETE")
-				.allowedHeaders("Content-Type")
+				.allowedHeaders("Content-Type", "Authorization")
 				.exposedHeaders("Location");
 	}
 

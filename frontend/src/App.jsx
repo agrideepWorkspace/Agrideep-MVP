@@ -42,12 +42,16 @@ import Topbar  from './components/Topbar'
 
 // STYLES — scoped CSS module for the App layout
 import styles from './App.module.css'
+import AuthScreen from './components/AuthScreen'
 
 // ── THE APP COMPONENT ─────────────────────────────────────────
 // This is a "function component" — the modern way to write React components.
 // It takes no props (it's the top-level component).
 // It returns JSX which describes the complete UI structure.
-function App() {
+function App({ authenticated = false, authError = '' }) {
+  if (!authenticated) {
+    return <AuthScreen error={authError} />
+  }
   return (
     // BrowserRouter MUST wrap everything that uses routing features.
     // It provides the "router context" — a shared object that all

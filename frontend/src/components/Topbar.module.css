@@ -38,3 +38,13 @@
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
+
+.signOut {
+  margin-left: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: var(--color-text);
+  background: var(--color-bg-light);
+  cursor: pointer;
+}

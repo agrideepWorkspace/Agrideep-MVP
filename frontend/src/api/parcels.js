@@ -1,8 +1,10 @@
+import { authorizedFetch } from '../auth.js'
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
   .replace(/\/+$/, '')
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, options)
+  const response = await authorizedFetch(`${API_BASE_URL}${path}`, options)
   const responseText = await response.text()
   let responseData = null
 
@@ -71,7 +73,7 @@ export async function getAnalysis(id, signal) {
 }
 
 export async function createAnalysis(parcelId, requestBody) {
-  const response = await fetch(
+  const response = await authorizedFetch(
     `${API_BASE_URL}/parcels/${encodeURIComponent(parcelId)}/analyses`,
     {
       method: 'POST',

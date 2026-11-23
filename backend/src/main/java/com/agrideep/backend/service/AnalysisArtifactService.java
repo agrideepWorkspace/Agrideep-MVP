@@ -36,8 +36,8 @@ public class AnalysisArtifactService {
 	private Path outputDirectory;
 
 	@Transactional(readOnly = true)
-	public Resource getArtifact(UUID jobId, String name) {
-		var job = analysisJobRepository.findById(jobId)
+	public Resource getArtifact(UUID jobId, String name, String ownerId) {
+		var job = analysisJobRepository.findByIdAndParcel_OwnerId(jobId, ownerId)
 				.orElseThrow(() -> new AnalysisJobNotFoundException(jobId));
 		if (job.getResult() == null) {
 			throw new AnalysisArtifactNotFoundException();

@@ -1,10 +1,12 @@
+import { authorizedFetch } from './auth.js'
+
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000')
   .replace(/\/+$/, '')
 
 // Calls the Spring API and returns the parsed JSON body. Failed requests throw an Error
 // carrying the API's {"error": {"message": ...}} text, which the pages show to the user.
 export async function requestJson(path, options) {
-  const response = await fetch(`${API_BASE_URL}${path}`, options)
+  const response = await authorizedFetch(`${API_BASE_URL}${path}`, options)
   const responseText = await response.text()
   let responseData = null
 

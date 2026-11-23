@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import styles from './Topbar.module.css'
+import { keycloak } from '../auth.js'
 
 function getPageTitle(pathname) {
   if (pathname === '/parcels/new') return 'New parcel'
@@ -21,6 +22,9 @@ function Topbar() {
         <span className={styles.breadcrumbSep} aria-hidden="true">›</span>
         <span className={styles.breadcrumbCurrent}>{pageTitle}</span>
       </nav>
+      <button className={styles.signOut} onClick={() => keycloak.logout({ redirectUri: window.location.origin })}>
+        Sign out
+      </button>
     </header>
   )
 }

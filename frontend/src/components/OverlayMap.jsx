@@ -4,6 +4,7 @@ import mapLibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import { MAP_STYLE } from '../map/mapStyle'
+import { authorizedFetch } from '../auth.js'
 import styles from './OverlayMap.module.css'
 
 setWorkerUrl(mapLibreWorkerUrl)
@@ -34,10 +35,44 @@ function OverlayMap({ geometry, overlay, opacity = 0.85, is3D = false, syncGroup
   const overlayRef = useRef(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [failedUrl, setFailedUrl] = useState(null)
+  const [authenticatedOverlay, setAuthenticatedOverlay] = useState(null)
 
   useEffect(() => {
     overlayRef.current = overlay
   }, [overlay])
+
+  useEffect(() => {
+    const sourceUrl = overlay?.url
+    if (!sourceUrl) {
+      setAuthenticatedOverlay(null)
+      setFailedUrl(null)
+      return undefined
+    }
+
+    let active = true
+    let objectUrl = null
+    setAuthenticatedOverlay(null)
+    setFailedUrl(null)
+    authorizedFetch(sourceUrl)
+      .then((response) => {
+        if (!response.ok) throw new Error('The overlay request failed.')
+        return response.blob()
+      })
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob)
+        if (active) {
+          setAuthenticatedOverlay({ url: objectUrl, sourceUrl, coordinates: overlay.coordinates })
+        }
+      })
+      .catch(() => {
+        if (active) setFailedUrl(sourceUrl)
+      })
+
+    return () => {
+      active = false
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [overlay?.url])
 
   useEffect(() => {
     const map = new MapLibreMap({
@@ -106,16 +141,18 @@ function OverlayMap({ geometry, overlay, opacity = 0.85, is3D = false, syncGroup
   useEffect(() => {
     const map = mapRef.current
     if (!map || !isLoaded) return
-    if (!overlay) {
+    if (!overlay || !authenticatedOverlay || authenticatedOverlay.sourceUrl !== overlay.url) {
       if (map.getLayer(OVERLAY_ID)) map.removeLayer(OVERLAY_ID)
       if (map.getSource(OVERLAY_ID)) map.removeSource(OVERLAY_ID)
       return
     }
     const source = map.getSource(OVERLAY_ID)
     if (source) {
-      source.updateImage({ url: overlay.url, coordinates: overlay.coordinates })
+      source.updateImage({ url: authenticatedOverlay.url, coordinates: authenticatedOverlay.coordinates })
     } else {
-      map.addSource(OVERLAY_ID, { type: 'image', url: overlay.url, coordinates: overlay.coordinates })
+      map.addSource(OVERLAY_ID, {
+        type: 'image', url: authenticatedOverlay.url, coordinates: authenticatedOverlay.coordinates,
+      })
       map.addLayer(
         {
           id: OVERLAY_ID,
@@ -126,7 +163,7 @@ function OverlayMap({ geometry, overlay, opacity = 0.85, is3D = false, syncGroup
         map.getLayer(PARCEL_LAYER_ID) ? PARCEL_LAYER_ID : undefined,
       )
     }
-  }, [overlay, isLoaded])
+  }, [overlay, authenticatedOverlay, isLoaded])
 
   useEffect(() => {
     const map = mapRef.current

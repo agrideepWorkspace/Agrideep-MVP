@@ -6,7 +6,9 @@ The parcel map uses **MapLibre GL JS**, **Esri World Imagery** satellite tiles, 
 
 ## Start the development server
 
-The frontend saves parcels with `POST {VITE_API_BASE_URL}/parcels`. The default base URL is `http://localhost:8000`, matching the API contract. To use a different Spring server, copy `.env.example` to `.env.local`, change `VITE_API_BASE_URL`, and restart Vite. The Spring API must allow requests from the frontend origin (usually `http://localhost:5173`) with the `Content-Type` header.
+The frontend signs users in and registers new users through Keycloak using Authorization Code flow with PKCE. From the repository root, `docker compose up --build` starts the development Keycloak realm with self-registration enabled. Copy `frontend/.env.example` to `frontend/.env.local` to override the API URL or Keycloak URL, realm, or client ID. For a different Keycloak realm, create a public client with Standard Flow enabled, PKCE S256, redirect URI `http://localhost:5173/*`, web origin `http://localhost:5173`, and an access-token audience mapper for `agrideep-api`. Enable user self-registration in Realm settings.
+
+After login or signup, the frontend calls `/users/me`; the backend validates the access token and creates the application profile keyed by the Keycloak `sub`. The Spring API must allow requests from the frontend origin (usually `http://localhost:5173`) with `Content-Type` and `Authorization` headers.
 
 The request body is the parcel name and the GeoJSON Polygon geometry:
 

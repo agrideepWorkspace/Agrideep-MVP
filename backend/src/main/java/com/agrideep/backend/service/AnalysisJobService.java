@@ -34,11 +34,11 @@ public class AnalysisJobService {
 	private final ObservationService observationService;
 
 	@Transactional
-	public AnalysisJobResponse create(UUID parcelId, CreateAnalysisRequest request) {
+	public AnalysisJobResponse create(UUID parcelId, CreateAnalysisRequest request, String ownerId) {
 		if (!request.getStartDate().isBefore(request.getEndDate())) {
 			throw new InvalidAnalysisRequestException("startDate must be earlier than endDate.");
 		}
-		Parcel parcel = parcelRepository.findById(parcelId)
+		Parcel parcel = parcelRepository.findByIdAndOwnerId(parcelId, ownerId)
 				.orElseThrow(() -> new ParcelNotFoundException(parcelId));
 		LocalDate effectiveStart = request.getStartDate();
 		if (!request.isForce()) {
@@ -51,7 +51,7 @@ public class AnalysisJobService {
 			}
 		}
 		if (!effectiveStart.isBefore(request.getEndDate())) {
-			return analysisJobRepository.findTopByParcel_IdOrderByCreatedAtDesc(parcelId)
+			return analysisJobRepository.findTopByParcel_IdAndParcel_OwnerIdOrderByCreatedAtDesc(parcelId, ownerId)
 					.map(AnalysisJobResponse::from)
 					.orElseThrow(() -> new InvalidAnalysisRequestException(
 							"There is nothing new to process for this parcel."));
@@ -71,18 +71,18 @@ public class AnalysisJobService {
 	}
 
 	@Transactional(readOnly = true)
-	public AnalysisJobResponse get(UUID id) {
-		return analysisJobRepository.findById(id)
+	public AnalysisJobResponse get(UUID id, String ownerId) {
+		return analysisJobRepository.findByIdAndParcel_OwnerId(id, ownerId)
 				.map(AnalysisJobResponse::from)
 				.orElseThrow(() -> new AnalysisJobNotFoundException(id));
 	}
 
 	@Transactional(readOnly = true)
-	public List<AnalysisJobResponse> listForParcel(UUID parcelId) {
-		if (!parcelRepository.existsById(parcelId)) {
+	public List<AnalysisJobResponse> listForParcel(UUID parcelId, String ownerId) {
+		if (!parcelRepository.existsByIdAndOwnerId(parcelId, ownerId)) {
 			throw new ParcelNotFoundException(parcelId);
 		}
-		return analysisJobRepository.findAllByParcel_IdOrderByCreatedAtDesc(parcelId).stream()
+		return analysisJobRepository.findAllByParcel_IdAndParcel_OwnerIdOrderByCreatedAtDesc(parcelId, ownerId).stream()
 				.map(AnalysisJobResponse::from)
 				.toList();
 	}

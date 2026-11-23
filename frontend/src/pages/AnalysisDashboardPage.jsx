@@ -4,10 +4,10 @@ import { Link, useParams } from 'react-router-dom'
 import {
   createAnalysis,
   getAnalyses,
-  getAnalysisArtifactUrl,
   getParcel,
   getParcels,
 } from '../api/parcels'
+import { AnalysisArtifactImage, DownloadAnalysisArtifact } from '../components/AnalysisArtifact'
 import ObservationsTable from '../components/ObservationsTable'
 import TrendChart from '../components/TrendChart'
 import styles from './AnalysisDashboardPage.module.css'
@@ -83,23 +83,20 @@ function AnalysisResult({ job }) {
 
       <div className={styles.artifacts}>
         {artifacts.report_pdf && (
-          <a href={getAnalysisArtifactUrl(job.id, 'monitoring-report.pdf')} target="_blank" rel="noreferrer">
-            Open satellite report (PDF)
-          </a>
+          <DownloadAnalysisArtifact jobId={job.id} name="monitoring-report.pdf">
+            Download satellite report (PDF)
+          </DownloadAnalysisArtifact>
         )}
         {artifacts.observations_csv && (
-          <a href={getAnalysisArtifactUrl(job.id, 'observations.csv')} download>
+          <DownloadAnalysisArtifact jobId={job.id} name="observations.csv">
             Download observations (CSV)
-          </a>
+          </DownloadAnalysisArtifact>
         )}
       </div>
 
       {artifacts.ndvi_map_png && (
         <figure className={styles.mapFigure}>
-          <img
-            src={getAnalysisArtifactUrl(job.id, 'ndvi-map.png')}
-            alt="NDVI map generated from satellite observations"
-          />
+          <AnalysisArtifactImage jobId={job.id} name="ndvi-map.png" alt="NDVI map generated from satellite observations" />
           <figcaption>Latest NDVI map · Sentinel-2 analysis output</figcaption>
         </figure>
       )}

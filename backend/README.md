@@ -10,7 +10,7 @@ From the repository root, copy `.env.example` to `.env`, configure Earth Engine 
 docker compose up --build
 ```
 
-This starts PostgreSQL/PostGIS, RabbitMQ, the API at `http://localhost:8000`, and one Python satellite worker. The default host ports are PostgreSQL `5433`, RabbitMQ `5673`, and RabbitMQ management `15673`. Database data and analysis artifacts persist in Docker volumes. `docker compose down -v` removes those volumes and their data.
+This starts PostgreSQL/PostGIS, RabbitMQ, Keycloak at `http://localhost:8080`, the API at `http://localhost:8000`, and one Python satellite worker. The development realm is imported from `../keycloak/agrideep-realm.json`; it enables self-registration, defines the public frontend client, and uses the AgriDeep Keycloak login theme in `../keycloak/themes/agrideep`. The default host ports are PostgreSQL `5433`, RabbitMQ `5673`, and RabbitMQ management `15673`. Database data and analysis artifacts persist in Docker volumes. `docker compose down -v` removes those volumes and their data.
 
 Set `EE_PROJECT` in `.env`. For a service account, put the private key at `secrets/earth-engine.json`, set `GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/earth-engine.json`, and ensure the Earth Engine API is enabled for the project. The `secrets/` directory is ignored by Git. Without valid credentials, analysis jobs fail with an explicit worker error; they do not return sample satellite data.
 
@@ -19,7 +19,7 @@ Set `EE_PROJECT` in `.env`. For a service account, put the private key at `secre
 You need Java 17+, PostgreSQL with PostGIS, and RabbitMQ. Start the supporting services, then launch Spring:
 
 ```powershell
-docker compose up -d db rabbitmq
+docker compose up -d db rabbitmq keycloak
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
@@ -66,6 +66,9 @@ Create a job with:
 | `SERVER_PORT` | `8000` | HTTP port. |
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/agrideep` | PostgreSQL/PostGIS connection. |
 | `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD` | `agrideep`, `agrideep` | Database credentials. |
+| `KEYCLOAK_ISSUER_URI` | `http://localhost:8080/realms/agrideep` | Expected token issuer. |
+| `KEYCLOAK_JWK_SET_URI` | `http://localhost:8080/realms/agrideep/protocol/openid-connect/certs` | Keycloak signing keys endpoint. |
+| `KEYCLOAK_API_AUDIENCE` | `agrideep-api` | Required access-token audience. |
 | `RABBITMQ_HOST`, `RABBITMQ_PORT` | `localhost`, `5672` | RabbitMQ connection. |
 | `RABBITMQ_USERNAME`, `RABBITMQ_PASSWORD` | `agrideep`, `agrideep` | RabbitMQ credentials. |
 | `ANALYSIS_REQUEST_QUEUE` | `agrideep.analysis.requests` | Durable API-to-worker queue. |
@@ -74,3 +77,7 @@ Create a job with:
 | `AGRIDEEP_CORS_ALLOWED_ORIGINS` | Vite dev and preview on localhost | Allowed browser origins. |
 
 Parcel geometry is stored as PostGIS `geometry(Polygon, 4326)`. Flyway applies versioned schema migrations from `src/main/resources/db/migration`; Hibernate validates the resulting schema at startup.
+
+Application user profiles are stored in `app_users`. The API validates Keycloak access tokens for the configured issuer and `agrideep-api` audience. On the frontend's first authenticated `/users/me` request, the backend inserts a profile using the verified `sub` claim as its primary key; it never accepts a user ID from the request body. Email and display name are copied from token claims on first sign-in. Signup and credentials are handled by Keycloak, not stored by AgriDeep.
+
+New parcels are assigned to the authenticated subject, and parcel, analysis, and artifact endpoints only return records owned by that subject. Existing parcels have a null owner after migration and are intentionally hidden from user APIs. To preserve access to existing data, an administrator must assign each legacy parcel's `owner_id` to the intended Keycloak `sub` in PostgreSQL; the new ownership check requires an owner for every new or modified parcel.

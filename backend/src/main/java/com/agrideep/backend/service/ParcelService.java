@@ -31,11 +31,12 @@ public class ParcelService {
 	private final ParcelMapper parcelMapper;
 
 	@Transactional
-	public ParcelResponse create(CreateParcelRequest request) {
+	public ParcelResponse create(CreateParcelRequest request, String ownerId) {
 		Polygon boundary = geometryService.toPolygon(request.getGeometry());
 		PolygonMeasurements measurements = geometryService.validateAndMeasure(boundary);
 		Parcel parcel = Parcel.builder()
 				.name(request.getName().trim())
+				.ownerId(ownerId)
 				.geometry(boundary)
 				.areaSquareMeters(measurements.getAreaSquareMeters())
 				.perimeterMeters(measurements.getPerimeterMeters())
@@ -46,24 +47,25 @@ public class ParcelService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ParcelResponse> list() {
-		return parcelRepository.findAllByOrderByCreatedAtDesc().stream().map(parcelMapper::toResponse).toList();
+	public List<ParcelResponse> list(String ownerId) {
+		return parcelRepository.findAllByOwnerIdOrderByCreatedAtDesc(ownerId).stream()
+				.map(parcelMapper::toResponse).toList();
 	}
 
 	@Transactional(readOnly = true)
-	public ParcelResponse get(UUID id) {
-		return parcelRepository.findById(id)
+	public ParcelResponse get(UUID id, String ownerId) {
+		return parcelRepository.findByIdAndOwnerId(id, ownerId)
 				.map(parcelMapper::toResponse)
 				.orElseThrow(() -> new ParcelNotFoundException(id));
 	}
 
 	@Transactional
-	public void delete(UUID id) {
-		if (!parcelRepository.existsById(id)) {
+	public void delete(UUID id, String ownerId) {
+		if (!parcelRepository.existsByIdAndOwnerId(id, ownerId)) {
 			throw new ParcelNotFoundException(id);
 		}
 		analysisJobRepository.deleteAllByParcel_Id(id);
-		parcelRepository.deleteById(id);
+		parcelRepository.deleteByIdAndOwnerId(id, ownerId);
 	}
 
 }

@@ -19,4 +19,6 @@ public class CreateAnalysisRequest {
 	@DecimalMin("0.0")
 	@DecimalMax("100.0")
 	private Double maxCloudPct;
+
+	private boolean force;
 }

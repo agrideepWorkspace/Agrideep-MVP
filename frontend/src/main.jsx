@@ -44,6 +44,8 @@ import './index.css'
 // This is NOT standard HTML — Vite's bundler handles the CSS import syntax.
 
 import App from './App.jsx'
+import { initializeAuth } from './auth.js'
+import { requestJson } from './api.js'
 // Imports our root App component (defined in App.jsx).
 // The "default export" from App.jsx is the App function/component.
 // We can name it anything when importing a default export, but "App" is conventional.
@@ -62,12 +64,14 @@ const root = createRoot(rootElement)
 // JSX NOTE: <App /> looks like HTML but it's JSX (JavaScript XML).
 // Vite/Babel compiles this to: React.createElement(App, null)
 // Which returns a React element (a plain JavaScript object describing the UI).
-root.render(
-  <StrictMode>
-    {/*
-      Wrapping App in StrictMode gives us extra warnings in the console during development.
-      StrictMode renders as nothing in the DOM — it's invisible but very useful.
-    */}
-    <App />
-  </StrictMode>,
-)
+async function startApp() {
+  try {
+    const authenticated = await initializeAuth()
+    if (authenticated) await requestJson('/users/me')
+    root.render(<StrictMode><App authenticated={authenticated} /></StrictMode>)
+  } catch (error) {
+    root.render(<App authError={error.message || 'Could not connect to Keycloak or the API.'} />)
+  }
+}
+
+startApp()

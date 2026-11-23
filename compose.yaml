@@ -1,4 +1,22 @@
 services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.5
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: http://localhost:8080
+      KC_SPI_THEME_CACHE_THEMES: "false"
+      KC_SPI_THEME_CACHE_TEMPLATES: "false"
+      KC_SPI_THEME_STATIC_MAX_AGE: "-1"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/agrideep-realm.json:/opt/keycloak/data/import/agrideep-realm.json:ro
+      - ./keycloak/themes/agrideep:/opt/keycloak/themes/agrideep:ro
+      - keycloak-data:/opt/keycloak/data
+
   db:
     image: postgis/postgis:17-3.6
     environment:
@@ -37,6 +55,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/agrideep
       SPRING_DATASOURCE_USERNAME: agrideep
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-agrideep}
+      KEYCLOAK_ISSUER_URI: http://localhost:8080/realms/agrideep
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/agrideep/protocol/openid-connect/certs
+      KEYCLOAK_API_AUDIENCE: agrideep-api
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-agrideep}
@@ -51,6 +72,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      keycloak:
+        condition: service_started
 
   satellite-worker:
     build:
@@ -86,6 +109,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  keycloak-data:
+    name: agrideep-keycloak-data
   postgres-data:
     name: agrideep-postgres-data
   analysis-output:
