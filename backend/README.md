@@ -73,4 +73,4 @@ Create a job with:
 | `SATELLITE_OUTPUT_DIR` | `data/output` | Shared worker/API artifact directory. |
 | `AGRIDEEP_CORS_ALLOWED_ORIGINS` | Vite dev and preview on localhost | Allowed browser origins. |
 
-Parcel geometry is stored as PostGIS `geometry(Polygon, 4326)`. Schema creation/upgrades are handled by Hibernate for this MVP; production should use versioned migrations.
+Parcel geometry is stored as PostGIS `geometry(Polygon, 4326)`. Flyway applies versioned schema migrations from `src/main/resources/db/migration`; Hibernate validates the resulting schema at startup.
