@@ -1,0 +1,36 @@
+CREATE TABLE observations (
+	id uuid PRIMARY KEY,
+	parcel_id uuid NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
+	job_id uuid NOT NULL REFERENCES analysis_jobs(id) ON DELETE CASCADE,
+	acquisition_date date NOT NULL,
+	acquired_at timestamp with time zone,
+	image_id varchar(255) NOT NULL,
+	valid boolean NOT NULL,
+	invalid_reason varchar(255),
+	valid_pixel_count integer,
+	valid_pixel_pct double precision,
+	cloud_pct double precision,
+	ndvi_mean double precision,
+	ndvi_median double precision,
+	ndvi_min double precision,
+	ndvi_max double precision,
+	ndvi_std double precision,
+	ndmi_mean double precision,
+	ndmi_median double precision,
+	ndmi_min double precision,
+	ndmi_max double precision,
+	ndmi_std double precision,
+	ndvi_overlay_key varchar(512),
+	ndmi_overlay_key varchar(512),
+	ndvi_lo double precision,
+	ndvi_hi double precision,
+	ndmi_lo double precision,
+	ndmi_hi double precision,
+	overlay_coordinates jsonb,
+	created_at timestamp with time zone NOT NULL,
+	updated_at timestamp with time zone NOT NULL,
+	CONSTRAINT uk_observation_parcel_image UNIQUE (parcel_id, image_id)
+);
+
+CREATE INDEX idx_observations_parcel_acquisition_date
+	ON observations (parcel_id, acquisition_date);
