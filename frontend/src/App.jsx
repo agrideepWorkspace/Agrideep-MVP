@@ -34,6 +34,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import ParcelSelectionPage    from './pages/ParcelSelectionPage'
 import AnalysisDashboardPage  from './pages/AnalysisDashboardPage'
 import SpatialReportPage      from './pages/SpatialReportPage'
+import ParcelMapPage          from './pages/ParcelMapPage'
 
 // LAYOUT COMPONENTS — always visible regardless of the current page
 import Sidebar from './components/Sidebar'
@@ -99,6 +100,8 @@ function App() {
               */}
               <Route path="/analysis/:id" element={<AnalysisDashboardPage />} />
               <Route path="/analysis"     element={<AnalysisDashboardPage />} />
+
+              <Route path="/map/:parcelId" element={<ParcelMapPage />} />
 
               {/* Spatial Report Preview */}
               <Route path="/report/:parcelId/:jobId" element={<SpatialReportPage />} />

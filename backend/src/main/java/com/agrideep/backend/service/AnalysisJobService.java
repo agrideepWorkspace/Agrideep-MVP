@@ -1,5 +1,6 @@
 package com.agrideep.backend.service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +31,7 @@ public class AnalysisJobService {
 	private final ParcelRepository parcelRepository;
 
 	private final ApplicationEventPublisher eventPublisher;
+	private final ObservationService observationService;
 
 	@Transactional
 	public AnalysisJobResponse create(UUID parcelId, CreateAnalysisRequest request) {
@@ -38,9 +40,25 @@ public class AnalysisJobService {
 		}
 		Parcel parcel = parcelRepository.findById(parcelId)
 				.orElseThrow(() -> new ParcelNotFoundException(parcelId));
+		LocalDate effectiveStart = request.getStartDate();
+		if (!request.isForce()) {
+			java.util.Optional<LocalDate> latest = observationService.latestDate(parcelId);
+			if (latest.isPresent()) {
+				LocalDate incremental = latest.get().plusDays(1);
+				if (incremental.isAfter(effectiveStart)) {
+					effectiveStart = incremental;
+				}
+			}
+		}
+		if (!effectiveStart.isBefore(request.getEndDate())) {
+			return analysisJobRepository.findTopByParcel_IdOrderByCreatedAtDesc(parcelId)
+					.map(AnalysisJobResponse::from)
+					.orElseThrow(() -> new InvalidAnalysisRequestException(
+							"There is nothing new to process for this parcel."));
+		}
 		AnalysisJob job = analysisJobRepository.save(AnalysisJob.builder()
 				.parcel(parcel)
-				.startDate(request.getStartDate())
+				.startDate(effectiveStart)
 				.endDate(request.getEndDate())
 				.maxCloudPct(request.getMaxCloudPct())
 				.status(AnalysisJobStatus.PENDING)
@@ -73,9 +91,21 @@ public class AnalysisJobService {
 	public void acceptWorkerEvent(AnalysisWorkerEvent event) {
 		AnalysisJob job = analysisJobRepository.findById(event.jobId())
 				.orElseThrow(() -> new AnalysisJobNotFoundException(event.jobId()));
+		if (job.getStatus() == AnalysisJobStatus.COMPLETED
+				|| job.getStatus() == AnalysisJobStatus.FAILED) {
+			if (job.getStatus() == AnalysisJobStatus.COMPLETED
+					&& "COMPLETED".equals(event.status())
+					&& event.result() != null) {
+				observationService.upsertCompleted(event.jobId(), event.result());
+			}
+			return;
+		}
 		switch (event.status()) {
 			case "RUNNING" -> job.markRunning();
-			case "COMPLETED" -> job.complete(event.result());
+			case "COMPLETED" -> {
+				job.complete(event.result());
+				observationService.upsertCompleted(event.jobId(), event.result());
+			}
 			case "FAILED" -> job.fail(event.errorCode(), event.errorMessage(), event.result());
 			default -> throw new IllegalArgumentException("Unsupported analysis worker status.");
 		}

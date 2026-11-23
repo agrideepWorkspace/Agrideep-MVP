@@ -106,6 +106,9 @@ function SpatialReportPage() {
                 <Link className={styles.primaryButton} to={`/report/${parcel.id}`}>
                   View analysis jobs
                 </Link>
+                <Link className={styles.primaryButton} to={`/map/${parcel.id}`}>
+                  Open map
+                </Link>
               </li>
             ))}
           </ul>
@@ -125,6 +128,7 @@ function SpatialReportPage() {
           </div>
           <div className={styles.actions}>
             <button className={styles.secondaryButton} onClick={() => navigate(-1)}>Back</button>
+            <Link className={styles.secondaryButton} to={`/map/${parcelId}`}>Open map</Link>
             <Link className={styles.primaryButton} to={`/analysis/${parcelId}`}>Start analysis</Link>
           </div>
         </header>
@@ -208,8 +212,6 @@ function SpatialReportPage() {
               <section className={styles.kpiPanel}>
                 <h3 className={styles.sectionTitle}>Summary from satellite observations</h3>
                 <div className={styles.summaryGrid}>
-                  <div><span>Mean NDVI</span><strong>{summary.ndvi_mean?.toFixed(2) ?? '—'}</strong></div>
-                  <div><span>Mean NDMI</span><strong>{summary.ndmi_mean?.toFixed(2) ?? '—'}</strong></div>
                   <div><span>Valid observations</span><strong>{summary.n_valid ?? '—'}</strong></div>
                   <div><span>Mean cloud cover</span><strong>{summary.mean_cloud_pct?.toFixed(1) ?? '—'}%</strong></div>
                 </div>
@@ -224,7 +226,16 @@ function SpatialReportPage() {
             )}
 
             {chartData.length > 0 && <TrendChart data={chartData} />}
-            {observations.length > 0 && <ObservationsTable observations={observations} />}
+            <details>
+              <summary>Technical details</summary>
+              {summary && (
+                <p>
+                  Mean NDVI: {summary.ndvi_mean?.toFixed(2) ?? '—'} ·
+                  {' '}Mean NDMI: {summary.ndmi_mean?.toFixed(2) ?? '—'}
+                </p>
+              )}
+              {observations.length > 0 && <ObservationsTable observations={observations} />}
+            </details>
 
             {artifacts.ndvi_map_png && (
               <figure className={styles.mapFigure}>

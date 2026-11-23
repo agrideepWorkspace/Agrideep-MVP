@@ -1,0 +1,39 @@
+.wrapper {
+  position: relative;
+  min-width: 0;
+}
+
+.map {
+  width: 100%;
+  height: min(68vh, 620px);
+  min-height: 360px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.label {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.78);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.error {
+  position: absolute;
+  z-index: 2;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: var(--font-size-sm);
+}
